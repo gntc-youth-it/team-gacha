@@ -1,25 +1,42 @@
 import React, { useState } from 'react';
 
-const App = () => {
+function App() {
   const [groups, setGroups] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 사용자 이름 목록을 가져오는 함수
   const fetchNames = async () => {
     try {
       setIsLoading(true);
       setError('');
 
-      // API 호출
-      const response = await fetch('/api/getNames');
-      const data = await response.json();
+      let names;
 
-      if (!response.ok) {
-        throw new Error(data.error || '이름 목록을 가져올 수 없습니다.');
+      // 현재 환경 확인 (로컬인지 프로덕션인지)
+      const isDevelopment = window.location.hostname === 'localhost'
+          || window.location.hostname === '127.0.0.1';
+
+      if (isDevelopment) {
+        // 로컬 환경: 임시 데이터 사용
+        names = [
+          '김민준', '이서준', '박서연', '최윤서', '정지호',
+          '장도윤', '오유준', '정지윤', '김하린', '이준우',
+          '홍승아', '김사랑', '이유진', '박민서', '최지우'
+        ];
+        console.log('🚀 로컬 환경 - 임시 데이터 사용');
+      } else {
+        // 프로덕션 환경: API 호출
+        console.log('🌐 프로덕션 환경 - API 호출');
+        const response = await fetch('/api/getNames');
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || '이름 목록을 가져올 수 없습니다.');
+        }
+
+        const data = await response.json();
+        names = data.names;
       }
-
-      const names = data.names;
 
       // 조 배치 로직 실행
       const assignedGroups = assignToGroups(names);
@@ -27,26 +44,22 @@ const App = () => {
 
     } catch (err) {
       setError(err.message);
+      console.error('❌ Error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 조 배치 로직
   const assignToGroups = (names) => {
-    // 이름 배열 복사 및 무작위 섞기
     const shuffledNames = [...names].sort(() => Math.random() - 0.5);
-
-    // 조 크기 계산 (5-6명)
     const totalPeople = shuffledNames.length;
     const numberOfGroups = Math.ceil(totalPeople / 6);
     const groups = [];
 
-    // 조 배치
     for (let i = 0; i < numberOfGroups; i++) {
       const groupSize = i === numberOfGroups - 1
-          ? totalPeople - (i * 6) // 마지막 조는 남은 인원
-          : Math.min(6, totalPeople - (i * 6)); // 다른 조는 최대 6명
+          ? totalPeople - (i * 6)
+          : Math.min(6, totalPeople - (i * 6));
 
       const group = shuffledNames.slice(i * 6, i * 6 + groupSize);
       groups.push({
@@ -58,6 +71,9 @@ const App = () => {
     return groups;
   };
 
+  const isDev = window.location.hostname === 'localhost'
+      || window.location.hostname === '127.0.0.1';
+
   return (
       <div className="min-h-screen bg-blue-50 py-12">
         <div className="max-w-4xl mx-auto px-4">
@@ -68,6 +84,12 @@ const App = () => {
             <h2 className="text-xl text-center text-blue-700 mb-8">
               조 배치 시스템
             </h2>
+
+            {isDev && (
+                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+                  <strong>개발 모드:</strong> 임시 데이터를 사용합니다.
+                </div>
+            )}
 
             <div className="text-center mb-8">
               <button
@@ -113,11 +135,11 @@ const App = () => {
           </div>
 
           <div className="mt-8 text-center text-sm text-gray-600">
-            <p>청년봉사선교회 © 2025</p>
+            <p>청년봉사선교회 IT부 ㅎ© 2025</p>
           </div>
         </div>
       </div>
   );
-};
+}
 
 export default App;
