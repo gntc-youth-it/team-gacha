@@ -6,12 +6,18 @@ function App() {
   const [error, setError] = useState('');
   const [exclusions, setExclusions] = useState([]);
   const [debug, setDebug] = useState('');
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState(0); // 0: 없음, 1: 가차머신, 2: 페이드, 3: 결과
 
   const fetchNames = async () => {
     try {
       setIsLoading(true);
       setError('');
       setDebug('');
+      setIsAnimating(true);
+      setShowResults(false);
+      setAnimationPhase(1);
 
       let names, exclusionPairs;
 
@@ -19,13 +25,11 @@ function App() {
           || window.location.hostname === '127.0.0.1';
 
       if (isDevelopment) {
-        // 로컬 개발용 데이터
         names = [
           '김민준', '이서준', '박서연', '최윤서', '정지호',
           '장도윤', '오유준', '정지윤', '김하린', '이준우',
           '홍승아', '김사랑', '이유진', '박민서', '최지우'
         ];
-        // 로컬 테스트용 제외 조합
         exclusionPairs = [
           ['김민준', '이서준'],
           ['박서연', '최윤서']
@@ -48,10 +52,23 @@ function App() {
 
       setExclusions(exclusionPairs);
       const assignedGroups = assignToGroups(names, exclusionPairs);
-      setGroups(assignedGroups);
+
+      // 애니메이션 타이밍
+      setTimeout(() => {
+        setGroups(assignedGroups);
+        setAnimationPhase(2); // 페이드 아웃 시작
+      }, 4000);
+
+      setTimeout(() => {
+        setIsAnimating(false);
+        setAnimationPhase(3); // 결과 표시
+        setTimeout(() => setShowResults(true), 200);
+      }, 5500);
 
     } catch (err) {
       setError(err.message);
+      setIsAnimating(false);
+      setAnimationPhase(0);
       console.error('❌ Error:', err);
     } finally {
       setIsLoading(false);
@@ -68,7 +85,6 @@ function App() {
       }];
     }
 
-    // 조 수 계산
     let numberOfGroups = Math.round(totalPeople / 5.5);
     let avgPerGroup = totalPeople / numberOfGroups;
 
@@ -82,9 +98,6 @@ function App() {
       avgPerGroup = totalPeople / numberOfGroups;
     }
 
-    setDebug(prev => prev + `\n조 수: ${numberOfGroups}, 평균 인원: ${avgPerGroup.toFixed(1)}`);
-
-    // 조 배치 시도
     let groups = [];
     let maxAttempts = 50;
     let attempts = 0;
@@ -94,7 +107,6 @@ function App() {
       groups = [];
       const shuffledNames = [...names].sort(() => Math.random() - 0.5);
 
-      // 조 초기화
       const baseSize = Math.floor(totalPeople / numberOfGroups);
       const remainder = totalPeople % numberOfGroups;
 
@@ -108,7 +120,6 @@ function App() {
         currentIndex += groupSize;
       }
 
-      // 제약 조건 검사
       validAssignment = checkConstraints(groups, exclusionPairs);
 
       if (!validAssignment) {
@@ -116,10 +127,7 @@ function App() {
       }
     }
 
-    setDebug(prev => prev + `\n배치 시도 횟수: ${attempts}`);
-
     if (!validAssignment) {
-      setDebug(prev => prev + '\n❌ 제약 조건을 만족하는 배치를 찾을 수 없음');
       throw new Error('제약 조건을 만족하는 조 편성을 찾을 수 없습니다. 다시 시도해주세요.');
     }
 
@@ -141,70 +149,112 @@ function App() {
       || window.location.hostname === '127.0.0.1';
 
   return (
-      <div className="min-h-screen bg-blue-50 py-12">
+      <div className="min-h-screen bg-gradient-to-b from-pink-100 to-pink-200 py-12">
+        <style>{`
+        @keyframes fade-out {
+          0% { opacity: 1; transform: scale(1); }
+          70% { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(0.8); }
+        }
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-out {
+          animation: fade-out 1.5s ease-out forwards;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-out;
+        }
+      `}</style>
+
         <div className="max-w-4xl mx-auto px-4">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h1 className="text-3xl font-bold text-center text-blue-900 mb-6">
-              청년봉사선교회 일일 임원 수련회
+          <div className="bg-white rounded-3xl shadow-xl p-8 border-4 border-pink-300">
+            <h1 className="text-3xl font-bold text-center text-pink-600 mb-2">
+              청년봉사선교회 ✨
             </h1>
-            <h2 className="text-xl text-center text-blue-700 mb-8">
-              조 배치 시스템
+            <h2 className="text-xl text-center text-pink-500 mb-8">
+              일일 임원 수련회 조 배치 가차 🎀
             </h2>
 
             {isDev && (
-                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-xl mb-6">
                   <strong>개발 모드:</strong> 임시 데이터를 사용합니다.
                 </div>
             )}
 
-            {/* 로컬 환경에서만 배제 조합 표시 */}
             {isDev && exclusions.length > 0 && (
-                <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-6">
+                <div className="bg-pink-50 border border-pink-200 text-pink-700 px-4 py-3 rounded-xl mb-6">
                   <strong>배제 조합:</strong> {exclusions.map((pair, idx) =>
                     `${pair[0]} ↔ ${pair[1]}`
                 ).join(', ')}
                 </div>
             )}
 
-            {/* 로컬 환경에서만 디버그 정보 표시 */}
             {isDev && debug && (
-                <div className="bg-gray-100 border border-gray-400 text-gray-700 px-4 py-3 rounded mb-6 whitespace-pre-wrap font-mono text-sm">
+                <div className="bg-gray-50 border border-gray-200 text-gray-600 px-4 py-3 rounded-xl mb-6 whitespace-pre-wrap font-mono text-sm">
                   {debug}
                 </div>
             )}
 
             <div className="text-center mb-8">
-              <button
-                  onClick={fetchNames}
-                  disabled={isLoading}
-                  className={`px-6 py-3 rounded-md text-white font-medium
-                ${isLoading
-                      ? 'bg-blue-300 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-              >
-                {isLoading ? '로딩 중...' : '조 배치하기'}
-              </button>
+              {isAnimating ? (
+                  <div className={`relative mb-8 ${animationPhase === 2 ? 'animate-fade-out' : ''}`}>
+                    {/* 가차 머신 */}
+                    <div className="relative w-48 h-64 mx-auto bg-gradient-to-br from-pink-400 to-pink-500 rounded-lg shadow-lg border-4 border-pink-300">
+                      <div className="absolute w-36 h-36 bg-white/20 rounded-full top-6 left-6"></div>
+                      <div className="absolute w-32 h-32 bg-white/40 rounded-full top-8 left-8 overflow-hidden">
+                        <div className="w-full h-full bg-gradient-to-br from-pink-300 to-pink-400 rounded-full animate-bounce"></div>
+                      </div>
+                      {/* 레버 */}
+                      <div className="absolute w-4 h-16 bg-pink-600 rounded-full right-4 top-1/2 origin-top transform -translate-y-1/2">
+                        <div className="absolute w-10 h-4 bg-pink-700 rounded-full -right-6 top-8 animate-spin"></div>
+                      </div>
+                      {/* 다이얼 */}
+                      <div className="absolute w-8 h-8 bg-white rounded-full border-4 border-pink-500 left-8 bottom-8">
+                        <div className="w-1 h-6 bg-pink-500 absolute top-1 left-3.5 origin-bottom transform rotate-45 animate-spin"></div>
+                      </div>
+                    </div>
+
+                    {/* 캡슐 애니메이션 */}
+                    <div className="w-20 h-32 mx-auto bg-gradient-to-b from-transparent via-white to-pink-200 rounded-full shadow-lg"></div>
+                  </div>
+              ) : (
+                  <button
+                      onClick={fetchNames}
+                      disabled={isLoading || isAnimating}
+                      className={`px-8 py-4 rounded-full text-white font-bold text-lg transform transition-all ${
+                          isLoading || isAnimating
+                              ? 'bg-pink-300 cursor-not-allowed'
+                              : 'bg-pink-500 hover:bg-pink-600 active:scale-95 shadow-lg'
+                      }`}
+                  >
+                    ✨ 조 배치 뽑기 ✨
+                  </button>
+              )}
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
                   {error}
                 </div>
             )}
 
-            {groups.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {groups.length > 0 && showResults && (
+                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${showResults ? 'animate-fade-in' : ''}`}>
                   {groups.map((group) => (
-                      <div key={group.id} className="bg-blue-100 rounded-lg p-4">
-                        <h3 className="text-lg font-bold text-blue-800 mb-3">
-                          {group.id}조 ({group.members.length}명)
+                      <div
+                          key={group.id}
+                          className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-4 border-2 border-pink-200 shadow-md transform transition-all hover:scale-105"
+                      >
+                        <h3 className="text-lg font-bold text-pink-700 mb-3 text-center">
+                          🌸 {group.id}조 ({group.members.length}명) 🌸
                         </h3>
                         <ul className="space-y-2">
                           {group.members.map((member, index) => (
                               <li
                                   key={index}
-                                  className="text-blue-700 bg-white px-3 py-1 rounded shadow-sm"
+                                  className="text-pink-700 bg-white/80 px-3 py-1 rounded-full shadow-sm text-center font-medium"
                               >
                                 {member}
                               </li>
@@ -216,8 +266,8 @@ function App() {
             )}
           </div>
 
-          <div className="mt-8 text-center text-sm text-gray-600">햣
-            <p>청년봉사선교회 IT부 © 2025</p>
+          <div className="mt-8 text-center text-sm text-pink-600">
+            <p>청년봉사선교회 © 2025 💖</p>
           </div>
         </div>
       </div>
