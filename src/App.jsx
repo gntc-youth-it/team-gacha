@@ -267,7 +267,7 @@ function App() {
           </div>
 
           <div className="mt-8 text-center text-sm text-pink-600">
-            <p>청년봉사선교회 © 2025 💖</p>
+            <p>청년봉사선교회 IT부 © 2025 💖</p>
           </div>
         </div>
       </div>
