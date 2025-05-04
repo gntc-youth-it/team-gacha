@@ -12,12 +12,10 @@ function App() {
 
       let names;
 
-      // 현재 환경 확인 (로컬인지 프로덕션인지)
       const isDevelopment = window.location.hostname === 'localhost'
           || window.location.hostname === '127.0.0.1';
 
       if (isDevelopment) {
-        // 로컬 환경: 임시 데이터 사용
         names = [
           '김민준', '이서준', '박서연', '최윤서', '정지호',
           '장도윤', '오유준', '정지윤', '김하린', '이준우',
@@ -25,7 +23,6 @@ function App() {
         ];
         console.log('🚀 로컬 환경 - 임시 데이터 사용');
       } else {
-        // 프로덕션 환경: API 호출
         console.log('🌐 프로덕션 환경 - API 호출');
         const response = await fetch('/api/getNames');
 
@@ -38,7 +35,6 @@ function App() {
         names = data.names;
       }
 
-      // 조 배치 로직 실행
       const assignedGroups = assignToGroups(names);
       setGroups(assignedGroups);
 
@@ -51,21 +47,40 @@ function App() {
   };
 
   const assignToGroups = (names) => {
+    // 이름 배열 복사 및 무작위 섞기
     const shuffledNames = [...names].sort(() => Math.random() - 0.5);
     const totalPeople = shuffledNames.length;
-    const numberOfGroups = Math.ceil(totalPeople / 6);
+
+    // 조 수 계산 (최소 5명 보장)
+    const numberOfGroups = Math.floor(totalPeople / 6);
+
+    // 인원이 부족한 경우 처리
+    if (totalPeople < 5) {
+      return [{
+        id: 1,
+        members: shuffledNames
+      }];
+    }
+
+    // 전체 인원이 조 수에 완벽히 분배되지 않는 경우의 수 계산
+    const remainder = totalPeople % numberOfGroups;
+    const baseGroupSize = Math.floor(totalPeople / numberOfGroups);
+
+    // 조 배치
     const groups = [];
+    let currentIndex = 0;
 
     for (let i = 0; i < numberOfGroups; i++) {
-      const groupSize = i === numberOfGroups - 1
-          ? totalPeople - (i * 6)
-          : Math.min(6, totalPeople - (i * 6));
+      // 남은 인원을 앞쪽 조들에 균등하게 분배
+      const groupSize = i < remainder ? baseGroupSize + 1 : baseGroupSize;
 
-      const group = shuffledNames.slice(i * 6, i * 6 + groupSize);
+      const group = shuffledNames.slice(currentIndex, currentIndex + groupSize);
       groups.push({
         id: i + 1,
         members: group
       });
+
+      currentIndex += groupSize;
     }
 
     return groups;
@@ -116,7 +131,7 @@ function App() {
                   {groups.map((group) => (
                       <div key={group.id} className="bg-blue-100 rounded-lg p-4">
                         <h3 className="text-lg font-bold text-blue-800 mb-3">
-                          {group.id}조
+                          {group.id}조 ({group.members.length}명)
                         </h3>
                         <ul className="space-y-2">
                           {group.members.map((member, index) => (
@@ -135,7 +150,7 @@ function App() {
           </div>
 
           <div className="mt-8 text-center text-sm text-gray-600">
-            <p>청년봉사선교회 IT부 ㅎ© 2025</p>
+            <p>청년봉사선교회 IT부 © 2025</p>
           </div>
         </div>
       </div>
