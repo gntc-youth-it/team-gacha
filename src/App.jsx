@@ -59,17 +59,21 @@ function App() {
       }];
     }
 
-    // 조 수 계산 (최소 5명 보장)
-    // 최대 6명까지 한 조에 배치
-    let numberOfGroups = Math.ceil(totalPeople / 6);
+    // 한 조당 최소 5명, 최대 6명으로 배치
+    let numberOfGroups = Math.round(totalPeople / 5.5);
 
-    // 남은 인원이 5명보다 적으면 조 수를 줄임
-    while (numberOfGroups > 1) {
-      const remainder = totalPeople % numberOfGroups;
-      if (remainder >= 5 || remainder === 0) {
-        break;
-      }
+    // 조를 나누었을 때 한 조에 몇 명이 들어가는지 계산
+    let avgPerGroup = totalPeople / numberOfGroups;
+
+    // 평균 인원이 5명보다 작으면 조 수를 줄이고, 6명보다 크면 조 수를 늘림
+    while (avgPerGroup < 5 && numberOfGroups > 1) {
       numberOfGroups--;
+      avgPerGroup = totalPeople / numberOfGroups;
+    }
+
+    while (avgPerGroup > 6 && totalPeople - numberOfGroups * 6 >= 5) {
+      numberOfGroups++;
+      avgPerGroup = totalPeople / numberOfGroups;
     }
 
     // 조당 기본 인원 계산
