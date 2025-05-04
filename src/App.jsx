@@ -51,28 +51,37 @@ function App() {
     const shuffledNames = [...names].sort(() => Math.random() - 0.5);
     const totalPeople = shuffledNames.length;
 
-    // 조 수 계산 (최소 5명 보장)
-    const numberOfGroups = Math.floor(totalPeople / 6);
-
-    // 인원이 부족한 경우 처리
-    if (totalPeople < 5) {
+    // 인원이 4명 이하인 경우
+    if (totalPeople <= 4) {
       return [{
         id: 1,
         members: shuffledNames
       }];
     }
 
-    // 전체 인원이 조 수에 완벽히 분배되지 않는 경우의 수 계산
-    const remainder = totalPeople % numberOfGroups;
-    const baseGroupSize = Math.floor(totalPeople / numberOfGroups);
+    // 조 수 계산 (최소 5명 보장)
+    // 최대 6명까지 한 조에 배치
+    let numberOfGroups = Math.ceil(totalPeople / 6);
 
-    // 조 배치
+    // 남은 인원이 5명보다 적으면 조 수를 줄임
+    while (numberOfGroups > 1) {
+      const remainder = totalPeople % numberOfGroups;
+      if (remainder >= 5 || remainder === 0) {
+        break;
+      }
+      numberOfGroups--;
+    }
+
+    // 조당 기본 인원 계산
+    const baseGroupSize = Math.floor(totalPeople / numberOfGroups);
+    const extraPeople = totalPeople % numberOfGroups;
+
     const groups = [];
     let currentIndex = 0;
 
     for (let i = 0; i < numberOfGroups; i++) {
-      // 남은 인원을 앞쪽 조들에 균등하게 분배
-      const groupSize = i < remainder ? baseGroupSize + 1 : baseGroupSize;
+      // 남은 인원을 앞쪽 조들에 분배
+      const groupSize = i < extraPeople ? baseGroupSize + 1 : baseGroupSize;
 
       const group = shuffledNames.slice(currentIndex, currentIndex + groupSize);
       groups.push({
