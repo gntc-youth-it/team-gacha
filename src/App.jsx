@@ -4,38 +4,50 @@ function App() {
   const [groups, setGroups] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [exclusions, setExclusions] = useState([]);
+  const [debug, setDebug] = useState('');
 
   const fetchNames = async () => {
     try {
       setIsLoading(true);
       setError('');
+      setDebug('');
 
-      let names;
+      let names, exclusionPairs;
 
       const isDevelopment = window.location.hostname === 'localhost'
           || window.location.hostname === '127.0.0.1';
 
       if (isDevelopment) {
+        // 로컬 개발용 데이터
         names = [
           '김민준', '이서준', '박서연', '최윤서', '정지호',
           '장도윤', '오유준', '정지윤', '김하린', '이준우',
           '홍승아', '김사랑', '이유진', '박민서', '최지우'
         ];
+        // 로컬 테스트용 제외 조합
+        exclusionPairs = [
+          ['김민준', '이서준'],
+          ['박서연', '최윤서']
+        ];
         console.log('🚀 로컬 환경 - 임시 데이터 사용');
+        setDebug(`로컬 데이터: ${names.length}명, 제외조합: ${exclusionPairs.length}개`);
       } else {
         console.log('🌐 프로덕션 환경 - API 호출');
         const response = await fetch('/api/getNames');
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || '이름 목록을 가져올 수 없습니다.');
+          throw new Error(errorData.error || '데이터를 가져올 수 없습니다.');
         }
 
         const data = await response.json();
         names = data.names;
+        exclusionPairs = data.exclusions || [];
       }
 
-      const assignedGroups = assignToGroups(names);
+      setExclusions(exclusionPairs);
+      const assignedGroups = assignToGroups(names, exclusionPairs);
       setGroups(assignedGroups);
 
     } catch (err) {
@@ -46,26 +58,20 @@ function App() {
     }
   };
 
-  const assignToGroups = (names) => {
-    // 이름 배열 복사 및 무작위 섞기
-    const shuffledNames = [...names].sort(() => Math.random() - 0.5);
-    const totalPeople = shuffledNames.length;
+  const assignToGroups = (names, exclusionPairs) => {
+    const totalPeople = names.length;
 
-    // 인원이 4명 이하인 경우
     if (totalPeople <= 4) {
       return [{
         id: 1,
-        members: shuffledNames
+        members: names
       }];
     }
 
-    // 한 조당 최소 5명, 최대 6명으로 배치
+    // 조 수 계산
     let numberOfGroups = Math.round(totalPeople / 5.5);
-
-    // 조를 나누었을 때 한 조에 몇 명이 들어가는지 계산
     let avgPerGroup = totalPeople / numberOfGroups;
 
-    // 평균 인원이 5명보다 작으면 조 수를 줄이고, 6명보다 크면 조 수를 늘림
     while (avgPerGroup < 5 && numberOfGroups > 1) {
       numberOfGroups--;
       avgPerGroup = totalPeople / numberOfGroups;
@@ -76,27 +82,59 @@ function App() {
       avgPerGroup = totalPeople / numberOfGroups;
     }
 
-    // 조당 기본 인원 계산
-    const baseGroupSize = Math.floor(totalPeople / numberOfGroups);
-    const extraPeople = totalPeople % numberOfGroups;
+    setDebug(prev => prev + `\n조 수: ${numberOfGroups}, 평균 인원: ${avgPerGroup.toFixed(1)}`);
 
-    const groups = [];
-    let currentIndex = 0;
+    // 조 배치 시도
+    let groups = [];
+    let maxAttempts = 50;
+    let attempts = 0;
+    let validAssignment = false;
 
-    for (let i = 0; i < numberOfGroups; i++) {
-      // 남은 인원을 앞쪽 조들에 분배
-      const groupSize = i < extraPeople ? baseGroupSize + 1 : baseGroupSize;
+    while (!validAssignment && attempts < maxAttempts) {
+      groups = [];
+      const shuffledNames = [...names].sort(() => Math.random() - 0.5);
 
-      const group = shuffledNames.slice(currentIndex, currentIndex + groupSize);
-      groups.push({
-        id: i + 1,
-        members: group
-      });
+      // 조 초기화
+      const baseSize = Math.floor(totalPeople / numberOfGroups);
+      const remainder = totalPeople % numberOfGroups;
 
-      currentIndex += groupSize;
+      let currentIndex = 0;
+      for (let i = 0; i < numberOfGroups; i++) {
+        const groupSize = i < remainder ? baseSize + 1 : baseSize;
+        groups.push({
+          id: i + 1,
+          members: shuffledNames.slice(currentIndex, currentIndex + groupSize)
+        });
+        currentIndex += groupSize;
+      }
+
+      // 제약 조건 검사
+      validAssignment = checkConstraints(groups, exclusionPairs);
+
+      if (!validAssignment) {
+        attempts++;
+      }
+    }
+
+    setDebug(prev => prev + `\n배치 시도 횟수: ${attempts}`);
+
+    if (!validAssignment) {
+      setDebug(prev => prev + '\n❌ 제약 조건을 만족하는 배치를 찾을 수 없음');
+      throw new Error('제약 조건을 만족하는 조 편성을 찾을 수 없습니다. 다시 시도해주세요.');
     }
 
     return groups;
+  };
+
+  const checkConstraints = (groups, exclusionPairs) => {
+    for (const group of groups) {
+      for (const [name1, name2] of exclusionPairs) {
+        if (group.members.includes(name1) && group.members.includes(name2)) {
+          return false;
+        }
+      }
+    }
+    return true;
   };
 
   const isDev = window.location.hostname === 'localhost'
@@ -116,6 +154,22 @@ function App() {
             {isDev && (
                 <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
                   <strong>개발 모드:</strong> 임시 데이터를 사용합니다.
+                </div>
+            )}
+
+            {/* 로컬 환경에서만 배제 조합 표시 */}
+            {isDev && exclusions.length > 0 && (
+                <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-6">
+                  <strong>배제 조합:</strong> {exclusions.map((pair, idx) =>
+                    `${pair[0]} ↔ ${pair[1]}`
+                ).join(', ')}
+                </div>
+            )}
+
+            {/* 로컬 환경에서만 디버그 정보 표시 */}
+            {isDev && debug && (
+                <div className="bg-gray-100 border border-gray-400 text-gray-700 px-4 py-3 rounded mb-6 whitespace-pre-wrap font-mono text-sm">
+                  {debug}
                 </div>
             )}
 
@@ -162,7 +216,7 @@ function App() {
             )}
           </div>
 
-          <div className="mt-8 text-center text-sm text-gray-600">
+          <div className="mt-8 text-center text-sm text-gray-600">햣
             <p>청년봉사선교회 IT부 © 2025</p>
           </div>
         </div>
