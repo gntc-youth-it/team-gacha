@@ -85,15 +85,15 @@ function App() {
       }];
     }
 
-    let numberOfGroups = Math.round(totalPeople / 5.5);
+    let numberOfGroups = Math.round(totalPeople / 4.5);
     let avgPerGroup = totalPeople / numberOfGroups;
 
-    while (avgPerGroup < 5 && numberOfGroups > 1) {
+    while (avgPerGroup < 4 && numberOfGroups > 1) {
       numberOfGroups--;
       avgPerGroup = totalPeople / numberOfGroups;
     }
 
-    while (avgPerGroup > 6 && totalPeople - numberOfGroups * 6 >= 5) {
+    while (avgPerGroup > 5 && totalPeople - numberOfGroups * 5 >= 4) {
       numberOfGroups++;
       avgPerGroup = totalPeople / numberOfGroups;
     }
