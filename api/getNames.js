@@ -15,25 +15,32 @@ export default function handler(req, res) {
   try {
     // 이름 목록 분리
     const names = namesString.split(',').map(name => name.trim());
+    const nameSet = new Set(names);
 
     // 제외 조합 분리 (예: "김민준-이서준,박서연-최윤서")
+    // 명단에 있는 사람들만 필터링
     let exclusions = [];
     if (exclusionsString) {
       exclusions = exclusionsString.split(',')
       .map(pair => pair.split('-').map(name => name.trim()))
-      .filter(pair => pair.length === 2);
+      .filter(pair => pair.length === 2 && nameSet.has(pair[0]) && nameSet.has(pair[1]));
     }
 
     // 제외 그룹 분리 (예: "김민준,이서준,박서연")
+    // 명단에 있는 사람들만 필터링
     let exclusionGroups = [];
     if (exclusionGroup1String) {
-      const group1 = exclusionGroup1String.split(',').map(name => name.trim()).filter(name => name);
+      const group1 = exclusionGroup1String.split(',')
+        .map(name => name.trim())
+        .filter(name => name && nameSet.has(name));
       if (group1.length > 0) {
         exclusionGroups.push(group1);
       }
     }
     if (exclusionGroup2String) {
-      const group2 = exclusionGroup2String.split(',').map(name => name.trim()).filter(name => name);
+      const group2 = exclusionGroup2String.split(',')
+        .map(name => name.trim())
+        .filter(name => name && nameSet.has(name));
       if (group2.length > 0) {
         exclusionGroups.push(group2);
       }

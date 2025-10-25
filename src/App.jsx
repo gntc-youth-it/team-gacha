@@ -106,7 +106,7 @@ function App() {
     }
 
     let groups = [];
-    let maxAttempts = 50;
+    let maxAttempts = 500;
     let attempts = 0;
     let validAssignment = false;
 
@@ -135,8 +135,13 @@ function App() {
     }
 
     if (!validAssignment) {
-      throw new Error('제약 조건을 만족하는 조 편성을 찾을 수 없습니다. 다시 시도해주세요.');
+      console.error(`❌ ${maxAttempts}번 시도 후 실패`);
+      console.error('배제 쌍:', exclusionPairs.length, '개');
+      console.error('배제 그룹:', exclusionGroupsData.map(g => g.length));
+      throw new Error(`제약 조건을 만족하는 조 편성을 찾을 수 없습니다. (${maxAttempts}번 시도) 다시 시도해주세요.`);
     }
+
+    console.log(`✅ ${attempts + 1}번 만에 성공!`);
 
     return groups;
   };
