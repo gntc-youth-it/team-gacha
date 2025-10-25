@@ -37,7 +37,8 @@ function App() {
         ];
         exclusionGroupsData = [
           ['정지호', '장도윤', '오유준'],
-          ['김하린', '이준우', '홍승아']
+          ['김하린', '이준우', '홍승아'],
+          ['박서연', '최윤서', '김민준']
         ];
         console.log('🚀 로컬 환경 - 임시 데이터 사용');
         setDebug(`로컬 데이터: ${names.length}명, 제외조합: ${exclusionPairs.length}개, 제외그룹: ${exclusionGroupsData.length}개`);
@@ -106,7 +107,7 @@ function App() {
     }
 
     let groups = [];
-    let maxAttempts = 500;
+    let maxAttempts = 10000;
     let attempts = 0;
     let validAssignment = false;
 

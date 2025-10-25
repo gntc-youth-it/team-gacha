@@ -5,6 +5,7 @@ export default function handler(req, res) {
   const exclusionsString = process.env.EXCLUSION_PAIRS;
   const exclusionGroup1String = process.env.EXCLUSION_GROUP_1;
   const exclusionGroup2String = process.env.EXCLUSION_GROUP_2;
+  const exclusionGroup3String = process.env.EXCLUSION_GROUP_3;
 
   if (!namesString) {
     return res.status(500).json({
@@ -43,6 +44,14 @@ export default function handler(req, res) {
         .filter(name => name && nameSet.has(name));
       if (group2.length > 0) {
         exclusionGroups.push(group2);
+      }
+    }
+    if (exclusionGroup3String) {
+      const group3 = exclusionGroup3String.split(',')
+        .map(name => name.trim())
+        .filter(name => name && nameSet.has(name));
+      if (group3.length > 0) {
+        exclusionGroups.push(group3);
       }
     }
 
