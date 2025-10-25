@@ -5,6 +5,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [exclusions, setExclusions] = useState([]);
+  const [exclusionGroups, setExclusionGroups] = useState([]);
   const [debug, setDebug] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -19,7 +20,7 @@ function App() {
       setShowResults(false);
       setAnimationPhase(1);
 
-      let names, exclusionPairs;
+      let names, exclusionPairs, exclusionGroupsData;
 
       const isDevelopment = window.location.hostname === 'localhost'
           || window.location.hostname === '127.0.0.1';
@@ -34,8 +35,12 @@ function App() {
           ['김민준', '이서준'],
           ['박서연', '최윤서']
         ];
+        exclusionGroupsData = [
+          ['정지호', '장도윤', '오유준'],
+          ['김하린', '이준우', '홍승아']
+        ];
         console.log('🚀 로컬 환경 - 임시 데이터 사용');
-        setDebug(`로컬 데이터: ${names.length}명, 제외조합: ${exclusionPairs.length}개`);
+        setDebug(`로컬 데이터: ${names.length}명, 제외조합: ${exclusionPairs.length}개, 제외그룹: ${exclusionGroupsData.length}개`);
       } else {
         console.log('🌐 프로덕션 환경 - API 호출');
         const response = await fetch('/api/getNames');
@@ -48,10 +53,12 @@ function App() {
         const data = await response.json();
         names = data.names;
         exclusionPairs = data.exclusions || [];
+        exclusionGroupsData = data.exclusionGroups || [];
       }
 
       setExclusions(exclusionPairs);
-      const assignedGroups = assignToGroups(names, exclusionPairs);
+      setExclusionGroups(exclusionGroupsData);
+      const assignedGroups = assignToGroups(names, exclusionPairs, exclusionGroupsData);
 
       // 애니메이션 타이밍
       setTimeout(() => {
@@ -75,25 +82,25 @@ function App() {
     }
   };
 
-  const assignToGroups = (names, exclusionPairs) => {
+  const assignToGroups = (names, exclusionPairs, exclusionGroupsData) => {
     const totalPeople = names.length;
 
-    if (totalPeople <= 4) {
+    if (totalPeople <= 3) {
       return [{
         id: 1,
         members: names
       }];
     }
 
-    let numberOfGroups = Math.round(totalPeople / 4.5);
+    let numberOfGroups = Math.round(totalPeople / 3);
     let avgPerGroup = totalPeople / numberOfGroups;
 
-    while (avgPerGroup < 4 && numberOfGroups > 1) {
+    while (avgPerGroup < 3 && numberOfGroups > 1) {
       numberOfGroups--;
       avgPerGroup = totalPeople / numberOfGroups;
     }
 
-    while (avgPerGroup > 5 && totalPeople - numberOfGroups * 5 >= 4) {
+    while (avgPerGroup > 4 && totalPeople - numberOfGroups * 4 >= 3) {
       numberOfGroups++;
       avgPerGroup = totalPeople / numberOfGroups;
     }
@@ -120,7 +127,7 @@ function App() {
         currentIndex += groupSize;
       }
 
-      validAssignment = checkConstraints(groups, exclusionPairs);
+      validAssignment = checkConstraints(groups, exclusionPairs, exclusionGroupsData);
 
       if (!validAssignment) {
         attempts++;
@@ -134,10 +141,21 @@ function App() {
     return groups;
   };
 
-  const checkConstraints = (groups, exclusionPairs) => {
+  const checkConstraints = (groups, exclusionPairs, exclusionGroupsData) => {
     for (const group of groups) {
+      // 기존 쌍 배제 조합 체크
       for (const [name1, name2] of exclusionPairs) {
         if (group.members.includes(name1) && group.members.includes(name2)) {
+          return false;
+        }
+      }
+
+      // 그룹 배제 체크: 같은 그룹의 인원들이 같은 조에 2명 이상 있으면 안됨
+      for (const exclusionGroup of exclusionGroupsData) {
+        const membersInThisGroup = group.members.filter(member =>
+          exclusionGroup.includes(member)
+        );
+        if (membersInThisGroup.length > 1) {
           return false;
         }
       }
@@ -174,7 +192,7 @@ function App() {
               청년봉사선교회 ✨
             </h1>
             <h2 className="text-xl text-center text-pink-500 mb-8">
-              2025 여름수련회 조 배치 가차 🎀
+              믿음의 삼겹줄 조 랜덤 뽑기 🪢
             </h2>
 
             {isDev && (
@@ -188,6 +206,17 @@ function App() {
                   <strong>배제 조합:</strong> {exclusions.map((pair, idx) =>
                     `${pair[0]} ↔ ${pair[1]}`
                 ).join(', ')}
+                </div>
+            )}
+
+            {isDev && exclusionGroups.length > 0 && (
+                <div className="bg-purple-50 border border-purple-200 text-purple-700 px-4 py-3 rounded-xl mb-6">
+                  <strong>배제 그룹:</strong>
+                  {exclusionGroups.map((group, idx) => (
+                    <div key={idx} className="mt-1">
+                      그룹 {idx + 1}: {group.join(', ')}
+                    </div>
+                  ))}
                 </div>
             )}
 
